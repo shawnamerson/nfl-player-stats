@@ -80,17 +80,31 @@ export default async function PlayersPage({ searchParams }: PageProps) {
         </form>
       </header>
 
+      {/* Grid of fully-clickable cards */}
       <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
         {players.map((p) => (
-          <li key={p.slug} className="rounded-xl border p-4">
-            <div className="text-sm text-slate-500">{p.position ?? "—"}</div>
-            <Link href={`/nfl/${p.slug}`} className="text-base font-semibold">
-              {p.player_name}
+          <li key={p.slug} className="h-full">
+            <Link
+              href={`/nfl/${p.slug}`}
+              aria-label={`View ${p.player_name} details`}
+              className="group block h-full rounded-xl border border-zinc-800 bg-black/40 p-4 transition
+                         hover:border-pink-500/70 hover:shadow-[0_0_0_2px_rgba(236,72,153,0.25)]
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500/60
+                         active:scale-[0.995] touch-manipulation"
+            >
+              <div className="text-sm text-zinc-400">{p.position ?? "—"}</div>
+              <div className="mt-1 text-base font-semibold text-white transition-colors group-hover:text-pink-300">
+                {p.player_name}
+              </div>
+              <div className="mt-2 text-xs text-zinc-500 group-hover:text-zinc-300">
+                Tap to view weekly charts & props
+              </div>
             </Link>
           </li>
         ))}
       </ul>
 
+      {/* Pager */}
       <nav className="flex items-center justify-between">
         <Link
           href={hrefFor(page - 1)}

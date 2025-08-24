@@ -1,26 +1,74 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Base */
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+body { background: #000; color: #fff; }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Reusable dark surfaces + neon accents */
+@layer components {
+  .surface {
+    @apply rounded-2xl border border-zinc-800 bg-zinc-950/70 shadow-lg backdrop-blur;
   }
-}
+  .card-pop {
+    @apply relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-lg;
+  }
+  .card-pop::before {
+    content: "";
+    position: absolute; inset: 0 0 auto 0; height: 3px;
+    background-image: linear-gradient(90deg, #10b981, #6366f1, #f472b6);
+    opacity: .9;
+  }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  .btn-neon {
+    @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium text-white;
+    background-image: linear-gradient(90deg, #10b981, #6366f1, #f472b6);
+    box-shadow: 0 0 24px rgba(16,185,129,.25), 0 0 24px rgba(99,102,241,.2), 0 0 24px rgba(244,114,182,.2);
+    transition: filter .15s ease, transform .15s ease;
+  }
+  .btn-neon:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+  .btn-ghost-neon {
+    @apply inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm text-white;
+    border-color: rgb(63 63 70);
+    background: rgba(255,255,255,0.02);
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .btn-ghost-neon:hover {
+    background: rgba(255,255,255,0.06);
+    border-color: transparent;
+    border-image: linear-gradient(90deg, #10b981, #6366f1, #f472b6) 1;
+  }
+
+  /* 🔥 Neon links for header/footer */
+  .link-neon {
+    position: relative;
+    display: inline-block;
+    padding: 0.5rem 0.75rem; /* px-3 py-2 */
+    color: #d4d4d8;          /* zinc-300 */
+    transition: color .15s ease, filter .15s ease;
+  }
+  .link-neon::after {
+    content: "";
+    position: absolute;
+    left: 0.75rem;           /* aligns with text padding */
+    right: 0.75rem;
+    bottom: 0.35rem;
+    height: 2px;
+    width: 0%;
+    background-image: linear-gradient(90deg, #10b981, #6366f1, #f472b6);
+    transition: width .2s ease;
+    border-radius: 2px;
+    opacity: .9;
+  }
+  .link-neon:hover {
+    color: #fff;
+    filter: drop-shadow(0 0 8px rgba(99,102,241,.35));
+  }
+  .link-neon:hover::after { width: calc(100% - 1.5rem); }
+
+  /* Active state keeps underline visible and boosts contrast */
+  .link-neon-active {
+    color: #fff;
+  }
+  .link-neon-active::after { width: calc(100% - 1.5rem); }
 }

@@ -18,7 +18,7 @@ const HOT_PINK = "#ff3ea5";
 const GRID = "rgba(255,62,165,0.25)";
 const LIME = "#a3e635"; // Tailwind lime-400
 
-type QBRow = {
+export type QBRow = {
   week: number;
   label?: string;
   opp?: string;
@@ -43,9 +43,11 @@ type Props = {
   height?: number; // per-chart height (px)
 };
 
+type Point = { week: number; value: number };
+
 export default function QBCharts({ data, height = 240 }: Props) {
   // Reusable transformer (null/undefined → 0)
-  const mkSeries = (key: keyof QBRow) =>
+  const mkSeries = (key: keyof QBRow): Point[] =>
     data.map((r) => ({
       week: r.week,
       value:
@@ -91,7 +93,7 @@ function ChartCard({
   height,
 }: {
   title: string;
-  data: { week: number; value: number }[];
+  data: Point[];
   height: number;
 }) {
   // Per-chart prop line (string for input, numeric for math)
@@ -172,8 +174,8 @@ function ChartCard({
               }}
               labelStyle={{ color: "#fff" }}
               itemStyle={{ color: "#fff" }}
-              formatter={(v: any) => [v, title]}
-              labelFormatter={(w: any) => `Week ${w}`}
+              formatter={(value: number) => [value, title]}
+              labelFormatter={(week: number) => `Week ${week}`}
             />
 
             {/* Lime reference line when set */}

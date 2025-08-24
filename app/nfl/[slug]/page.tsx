@@ -1,15 +1,39 @@
+// app/nfl/[slug]/page.tsx
 import { sql } from "@vercel/postgres";
 import Link from "next/link";
-import QBCharts from "@/components/QBCharts";
+import QBCharts, { QBRow } from "@/components/QBCharts";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ season?: string }>;
 };
 
+type GameStatRow = {
+  season: number;
+  week: number;
+  game_date: string | null;
+  opponent: string | null;
+  opp_abbr: string | null;
+  pass_att: number | null;
+  pass_cmp: number | null;
+  pass_cmp_pct: number | null;
+  pass_ypa: number | null;
+  pass_long: number | null;
+  pass_yds: number | null;
+  pass_td: number | null;
+  interceptions: number | null;
+  sacks: number | null;
+  passer_rating: number | null;
+  qbr: number | null;
+  rush_att: number | null;
+  rush_yds: number | null;
+  rush_td: number | null;
+  rush_long: number | null;
+};
+
 export default async function PlayerDetail({ params, searchParams }: PageProps) {
-  const { slug } = await params;                 // ✅ await params
-  const sp = await searchParams;                 // ✅ await searchParams
+  const { slug } = await params;
+  const sp = await searchParams;
   const seasonParam = Number(sp.season);
 
   const playerRes = await sql/* sql */`
@@ -18,7 +42,7 @@ export default async function PlayerDetail({ params, searchParams }: PageProps) 
     WHERE slug = ${slug} AND league = 'nfl'
     LIMIT 1;
   `;
-  const player = playerRes.rows[0];
+  const player = playerRes.rows[0] as { player_id: string; player_name: string; position: string | null } | undefined;
 
   if (!player) {
     return (
@@ -47,7 +71,7 @@ export default async function PlayerDetail({ params, searchParams }: PageProps) 
     WHERE player_id = ${player.player_id}::uuid AND season = ${season}
     ORDER BY week ASC;
   `;
-  const stats = statsRes.rows;
+  const stats = statsRes.rows as GameStatRow[];
 
   return (
     <main className="mx-auto max-w-7xl p-6 space-y-6">
@@ -77,22 +101,22 @@ export default async function PlayerDetail({ params, searchParams }: PageProps) 
       {String(player.position).toUpperCase() === "QB" ? (
         stats.length ? (
           <QBCharts
-            data={stats.map((r: any) => ({
+            data={stats.map<QBRow>((r) => ({
               week: r.week,
               label: `W${r.week} ${r.opp_abbr ?? ""}`.trim(),
-              opp: r.opp_abbr,
-              game_date: r.game_date ?? null,
-              pass_att: r.pass_att ?? 0,
-              pass_cmp: r.pass_cmp ?? 0,
-              pass_yds: r.pass_yds ?? 0,
-              pass_td: r.pass_td ?? 0,
-              interceptions: r.interceptions ?? 0,
-              pass_long: r.pass_long ?? 0,
-              sacks: r.sacks ?? 0,
-              rush_att: r.rush_att ?? 0,
-              rush_yds: r.rush_yds ?? 0,
-              rush_td: r.rush_td ?? 0,
-              rush_long: r.rush_long ?? 0,
+              opp: r.opp_abbr ?? undefined,
+              game_date: r.game_date,
+              pass_att: r.pass_att,
+              pass_cmp: r.pass_cmp,
+              pass_yds: r.pass_yds,
+              pass_td: r.pass_td,
+              interceptions: r.interceptions,
+              pass_long: r.pass_long,
+              sacks: r.sacks,
+              rush_att: r.rush_att,
+              rush_yds: r.rush_yds,
+              rush_td: r.rush_td,
+              rush_long: r.rush_long,
             }))}
           />
         ) : (

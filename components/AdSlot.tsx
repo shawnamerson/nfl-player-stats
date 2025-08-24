@@ -1,40 +1,24 @@
 // components/AdSlot.tsx
-"use client";
-import { useEffect } from "react";
+import React from "react";
+
+type Props = {
+  className?: string;
+  label?: string;
+};
 
 export default function AdSlot({
-  slot = "home-top",
-  placeholder = "Your ad here (responsive)",
-}: {
-  slot?: string;
-  placeholder?: string;
-}) {
-  const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT; // e.g., "ca-pub-XXXX"
-  useEffect(() => {
-    if (!client) return;
-    // @ts-ignore
-    (window.adsbygoogle = window.adsbygoogle || []).push({});
-  }, [client]);
-
-  if (!client) {
-    return (
-      <div className="flex h-64 w-full items-center justify-center rounded-2xl border border-dashed bg-slate-50 text-slate-500">
-        {placeholder}
-      </div>
-    );
-  }
-
+  className = "",
+  label = "Advertisement",
+}: Props) {
+  // Simple placeholder box — replace with your ad network init when ready
   return (
-    <>
-      <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js" />
-      <ins
-        className="adsbygoogle block"
-        style={{ display: "block" }}
-        data-ad-client={client}
-        data-ad-slot={slot}
-        data-ad-format="auto"
-        data-full-width-responsive="true"
-      />
-    </>
+    <div
+      className={`rounded-2xl border border-zinc-800 bg-zinc-950 p-6 text-center ${className}`}
+    >
+      <div className="text-xs uppercase tracking-wider text-zinc-500">
+        {label}
+      </div>
+      <div className="mt-2 text-sm text-zinc-300">Your ad could be here</div>
+    </div>
   );
 }

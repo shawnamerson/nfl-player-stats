@@ -16,14 +16,13 @@ import {
 
 const HOT_PINK = "#ff3ea5";
 const GRID = "rgba(255,62,165,0.25)";
-const LIME = "#a3e635"; // Tailwind lime-400
+const LIME = "#a3e635";
 
 export type QBRow = {
   week: number;
   label?: string;
   opp?: string;
   game_date?: string | null;
-
   pass_att?: number | null;
   pass_cmp?: number | null;
   pass_yds?: number | null;
@@ -31,22 +30,16 @@ export type QBRow = {
   interceptions?: number | null;
   pass_long?: number | null;
   sacks?: number | null;
-
   rush_att?: number | null;
   rush_yds?: number | null;
   rush_td?: number | null;
   rush_long?: number | null;
 };
 
-type Props = {
-  data: QBRow[];
-  height?: number; // per-chart height (px)
-};
-
+type Props = { data: QBRow[]; height?: number };
 type Point = { week: number; value: number };
 
 export default function QBCharts({ data, height = 240 }: Props) {
-  // Reusable transformer (null/undefined → 0)
   const mkSeries = (key: keyof QBRow): Point[] =>
     data.map((r) => ({
       week: r.week,
@@ -56,7 +49,6 @@ export default function QBCharts({ data, height = 240 }: Props) {
           : Number(r[key]),
     }));
 
-  // Define the charts you want to render (order matters)
   const charts: { key: keyof QBRow; title: string }[] = [
     { key: "pass_att", title: "Passing Attempts" },
     { key: "pass_cmp", title: "Completions" },
@@ -85,8 +77,6 @@ export default function QBCharts({ data, height = 240 }: Props) {
   );
 }
 
-/* ---------------- Chart Card ---------------- */
-
 function ChartCard({
   title,
   data,
@@ -96,27 +86,22 @@ function ChartCard({
   data: Point[];
   height: number;
 }) {
-  // Per-chart prop line (string for input, numeric for math)
   const [lineStr, setLineStr] = useState<string>("");
-
   const line = useMemo(() => {
     const n = parseFloat(lineStr);
     return Number.isFinite(n) ? n : null;
   }, [lineStr]);
 
-  // STRICTLY OVER: count and pct use ">" not ">="
   const { hits, pct } = useMemo(() => {
     if (line === null || data.length === 0) return { hits: 0, pct: 0 };
-    const h = data.filter((d) => d.value > line).length;
+    const h = data.filter((d) => d.value > line).length; // strictly over
     return { hits: h, pct: Math.round((h / data.length) * 100) };
   }, [line, data]);
 
   return (
     <div className="rounded-2xl border border-zinc-800 bg-black p-4 shadow-lg">
-      {/* Title + Prop Line input + Hit rate */}
       <div className="mb-2 flex items-end justify-between gap-3">
         <div className="text-sm font-semibold text-white">{title}</div>
-
         <div className="flex items-center gap-2">
           <label htmlFor={`${title}-line`} className="text-xs text-zinc-400">
             Prop Line
@@ -135,7 +120,7 @@ function ChartCard({
               style={{
                 color: LIME,
                 border: `1px solid ${LIME}`,
-                background: "rgba(163, 230, 53, 0.06)",
+                background: "rgba(163,230,53,.06)",
               }}
               title="Hit weeks / total (strictly over the line)"
             >
@@ -145,10 +130,12 @@ function ChartCard({
         </div>
       </div>
 
-      {/* Chart */}
       <div className="h-[240px] w-full">
         <ResponsiveContainer width="100%" height={height}>
-          <BarChart data={data} margin={{ top: 8, right: 12, bottom: 8, left: 12 }}>
+          <BarChart
+            data={data}
+            margin={{ top: 8, right: 12, bottom: 8, left: 12 }}
+          >
             <CartesianGrid stroke={GRID} vertical={false} />
             <XAxis
               dataKey="week"
@@ -177,15 +164,11 @@ function ChartCard({
               formatter={(value: number) => [value, title]}
               labelFormatter={(week: number) => `Week ${week}`}
             />
-
-            {/* Lime reference line when set */}
             {line !== null && (
               <ReferenceLine y={line} stroke={LIME} strokeDasharray="4 4" />
             )}
-
             <Bar dataKey="value" radius={[6, 6, 0, 0]}>
               {data.map((d, i) => {
-                // STRICTLY OVER for bar coloring
                 const hit = line !== null && d.value > line;
                 return <Cell key={`c-${i}`} fill={hit ? LIME : HOT_PINK} />;
               })}

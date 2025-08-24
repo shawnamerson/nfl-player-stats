@@ -31,37 +31,48 @@ type GameStatRow = {
   rush_long: number | null;
 };
 
-export default async function PlayerDetail({ params, searchParams }: PageProps) {
+export default async function PlayerDetail({
+  params,
+  searchParams,
+}: PageProps) {
   const { slug } = await params;
   const sp = await searchParams;
   const seasonParam = Number(sp.season);
 
-  const playerRes = await sql/* sql */`
+  const playerRes = await sql/* sql */ `
     SELECT player_id, player_name, position
     FROM players
     WHERE slug = ${slug} AND league = 'nfl'
     LIMIT 1;
   `;
-  const player = playerRes.rows[0] as { player_id: string; player_name: string; position: string | null } | undefined;
+  const player = playerRes.rows[0] as
+    | { player_id: string; player_name: string; position: string | null }
+    | undefined;
 
   if (!player) {
     return (
       <main className="mx-auto max-w-3xl p-6 space-y-4">
         <p className="text-sm text-red-700">Player not found.</p>
-        <Link className="text-sky-700 underline" href="/players">Back to players</Link>
+        <Link className="text-sky-700 underline" href="/players">
+          Back to players
+        </Link>
       </main>
     );
   }
 
-  const latestSeasonRes = await sql/* sql */`
+  const latestSeasonRes = await sql/* sql */ `
     SELECT COALESCE(MAX(season), 0) AS latest
     FROM game_stats
     WHERE player_id = ${player.player_id}::uuid;
   `;
-  const latestSeason = Number(latestSeasonRes.rows[0]?.latest || 0) || new Date().getFullYear();
-  const season = Number.isFinite(seasonParam) && seasonParam > 0 ? seasonParam : latestSeason;
+  const latestSeason =
+    Number(latestSeasonRes.rows[0]?.latest || 0) || new Date().getFullYear();
+  const season =
+    Number.isFinite(seasonParam) && seasonParam > 0
+      ? seasonParam
+      : latestSeason;
 
-  const statsRes = await sql/* sql */`
+  const statsRes = await sql/* sql */ `
     SELECT
       season, week, game_date, opponent, opp_abbr,
       pass_att, pass_cmp, pass_cmp_pct, pass_ypa, pass_long,
@@ -80,12 +91,24 @@ export default async function PlayerDetail({ params, searchParams }: PageProps) 
           <h1 className="text-2xl font-semibold">
             {player.player_name} — {player.position ?? "?"}
           </h1>
-          <p className="text-sm text-slate-600">Season {season} • {stats.length} games</p>
+          <p className="text-sm text-slate-600">
+            Season {season} • {stats.length} games
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/players" className="rounded-lg border px-3 py-1.5 text-sm">← All players</Link>
-          <form className="flex items-center gap-2" action={`/nfl/${encodeURIComponent(slug)}`}>
-            <label className="text-sm text-slate-600" htmlFor="season">Season</label>
+          <Link
+            href="/players"
+            className="rounded-lg border px-3 py-1.5 text-sm"
+          >
+            ← All players
+          </Link>
+          <form
+            className="flex items-center gap-2"
+            action={`/nfl/${encodeURIComponent(slug)}`}
+          >
+            <label className="text-sm text-slate-600" htmlFor="season">
+              Season
+            </label>
             <input
               id="season"
               name="season"
@@ -93,7 +116,9 @@ export default async function PlayerDetail({ params, searchParams }: PageProps) 
               className="w-24 rounded-lg border px-3 py-1.5 text-sm"
               type="number"
             />
-            <button className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm text-white">Go</button>
+            <button className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm text-white">
+              Go
+            </button>
           </form>
         </div>
       </header>
@@ -120,11 +145,14 @@ export default async function PlayerDetail({ params, searchParams }: PageProps) 
             }))}
           />
         ) : (
-          <p className="text-sm text-slate-600">No stats for season {season}.</p>
+          <p className="text-sm text-slate-600">
+            No stats for season {season}.
+          </p>
         )
       ) : (
         <p className="text-sm text-slate-600">
-          Charts currently implemented for QBs. Detected position: <b>{player.position || "?"}</b>
+          Charts currently implemented for QBs. Detected position:{" "}
+          <b>{player.position || "?"}</b>
         </p>
       )}
     </main>

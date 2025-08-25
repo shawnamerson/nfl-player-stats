@@ -39,7 +39,7 @@ export type QBRow = {
 type Props = { data: QBRow[]; height?: number };
 type Point = { week: number; value: number };
 
-export default function QBCharts({ data, height = 260 }: Props) {
+export default function QBCharts({ data, height = 280 }: Props) {
   const mkSeries = (key: keyof QBRow): Point[] =>
     data.map((r) => ({
       week: r.week,
@@ -99,9 +99,10 @@ function ChartCard({
   }, [line, data]);
 
   return (
-    <div className="h-full rounded-2xl border border-zinc-800 bg-black p-3 shadow-lg">
-      {/* header */}
-      <div className="mb-2 flex items-end justify-between gap-3">
+    // No padding on the outer card -> lets the chart reach the inside edge.
+    <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-black">
+      {/* Header keeps its own padding so it doesn't steal width from the chart */}
+      <div className="flex items-end justify-between gap-3 px-3 pt-3 pb-2">
         <div className="text-sm font-semibold text-white">{title}</div>
         <div className="flex items-center gap-2">
           <label htmlFor={`${title}-line`} className="text-xs text-zinc-400">
@@ -131,15 +132,14 @@ function ChartCard({
         </div>
       </div>
 
-      {/* chart wrapper:
-          - Mobile: use aspect-ratio so height grows with width (fills the card)
-          - ≥ sm: fixed pixel height for stable desktop layout
-      */}
-      <div className="w-full aspect-[16/13] sm:aspect-auto sm:h-[260px]">
+      {/* Mobile: chart area fills card via aspect-ratio (width -> height).
+          ≥ sm: fixed pixel height for tidy rows. */}
+      <div className="w-full aspect-[16/12] sm:aspect-auto sm:h-[280px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
-            margin={{ top: 8, right: 12, bottom: 8, left: 12 }}
+            // Zero left margin so Y-axis sits flush with the card’s inside edge.
+            margin={{ top: 6, right: 10, bottom: 6, left: 0 }}
           >
             <CartesianGrid stroke={GRID} vertical={false} />
             <XAxis
@@ -150,6 +150,10 @@ function ChartCard({
               axisLine={{ stroke: HOT_PINK }}
             />
             <YAxis
+              // Keep the axis line at the very edge, with ticks inside the plot.
+              mirror
+              tickMargin={2}
+              width={36} // small, prevents extra padding while keeping labels readable
               stroke={HOT_PINK}
               tick={{ fill: HOT_PINK, fontSize: 11 }}
               tickLine={{ stroke: HOT_PINK }}

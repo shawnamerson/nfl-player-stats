@@ -39,7 +39,7 @@ export type QBRow = {
 type Props = { data: QBRow[]; height?: number };
 type Point = { week: number; value: number };
 
-export default function QBCharts({ data, height = 240 }: Props) {
+export default function QBCharts({ data, height = 260 }: Props) {
   const mkSeries = (key: keyof QBRow): Point[] =>
     data.map((r) => ({
       week: r.week,
@@ -99,7 +99,8 @@ function ChartCard({
   }, [line, data]);
 
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-black p-4 shadow-lg">
+    <div className="h-full rounded-2xl border border-zinc-800 bg-black p-3 shadow-lg">
+      {/* header */}
       <div className="mb-2 flex items-end justify-between gap-3">
         <div className="text-sm font-semibold text-white">{title}</div>
         <div className="flex items-center gap-2">
@@ -130,8 +131,12 @@ function ChartCard({
         </div>
       </div>
 
-      <div className="h-[240px] w-full">
-        <ResponsiveContainer width="100%" height={height}>
+      {/* chart wrapper:
+          - Mobile: use aspect-ratio so height grows with width (fills the card)
+          - ≥ sm: fixed pixel height for stable desktop layout
+      */}
+      <div className="w-full aspect-[16/13] sm:aspect-auto sm:h-[260px]">
+        <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
             margin={{ top: 8, right: 12, bottom: 8, left: 12 }}

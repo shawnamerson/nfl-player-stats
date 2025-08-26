@@ -1,7 +1,7 @@
 // components/QBCharts.tsx
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -17,6 +17,9 @@ import {
 const HOT_PINK = "#ff3ea5";
 const GRID = "rgba(255,62,165,0.25)";
 const LIME = "#a3e635";
+
+// Chart margins used for pixel <-> value mapping
+const MARGINS = { top: 6, right: 10, bottom: 6, left: 0 };
 
 export type QBRow = {
   week: number;
@@ -77,6 +80,8 @@ export default function QBCharts({ data, height = 280 }: Props) {
   );
 }
 
+/* ---------------- Card with draggable prop line ---------------- */
+
 function ChartCard({
   title,
   data,
@@ -86,11 +91,18 @@ function ChartCard({
   data: Point[];
   height: number;
 }) {
-  const [lineStr, setLineStr] = useState<string>("");
-  const line = useMemo(() => {
-    const n = parseFloat(lineStr);
-    return Number.isFinite(n) ? n : null;
-  }, [lineStr]);
+  const { min, max } = useMemo(() => {
+    const vals = data.map((d) => d.value);
+    const dmin = Math.min(...vals);
+    const dmax = Math.max(...vals);
+    if (!Number.isFinite(dmin) || !Number.isFinite(dmax))
+      return { min: 0, max: 1 };
+    const pad = Math.max(1, (dmax - dmin) * 0.08);
+    return { min: dmin - pad, max: dmax + pad };
+  }, [data]);
+
+  // Start centered so the line is visible immediately
+  const [line, setLine] = useState<number | null>((min + max) / 2);
 
   const { hits, pct } = useMemo(() => {
     if (line === null || data.length === 0) return { hits: 0, pct: 0 };
@@ -99,23 +111,11 @@ function ChartCard({
   }, [line, data]);
 
   return (
-    // No padding on the outer card -> lets the chart reach the inside edge.
     <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-black">
-      {/* Header keeps its own padding so it doesn't steal width from the chart */}
+      {/* Header */}
       <div className="flex items-end justify-between gap-3 px-3 pt-3 pb-2">
         <div className="text-sm font-semibold text-white">{title}</div>
         <div className="flex items-center gap-2">
-          <label htmlFor={`${title}-line`} className="text-xs text-zinc-400">
-            Prop Line
-          </label>
-          <input
-            id={`${title}-line`}
-            inputMode="decimal"
-            placeholder="e.g. 275"
-            value={lineStr}
-            onChange={(e) => setLineStr(e.target.value)}
-            className="w-24 rounded-lg border border-zinc-800 bg-black px-2 py-1 text-xs text-white outline-none focus:border-zinc-700"
-          />
           {line !== null && (
             <span
               className="rounded-md px-2 py-1 text-[11px] font-semibold"
@@ -129,18 +129,20 @@ function ChartCard({
               HIT {hits}/{data.length} • {pct}%
             </span>
           )}
+          <button
+            onClick={() => setLine(null)}
+            className="rounded border border-zinc-700 px-2 py-1 text-[11px] text-zinc-300 hover:border-zinc-500"
+            title="Clear prop line"
+          >
+            Clear
+          </button>
         </div>
       </div>
 
-      {/* Mobile: chart area fills card via aspect-ratio (width -> height).
-          ≥ sm: fixed pixel height for tidy rows. */}
-      <div className="w-full aspect-[16/12] sm:aspect-auto sm:h-[280px]">
+      {/* Chart fills card on mobile via aspect-ratio; fixed height ≥ sm */}
+      <div className="relative w-full aspect-[16/12] sm:aspect-auto sm:h-[280px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={data}
-            // Zero left margin so Y-axis sits flush with the card’s inside edge.
-            margin={{ top: 6, right: 10, bottom: 6, left: 0 }}
-          >
+          <BarChart data={data} margin={MARGINS}>
             <CartesianGrid stroke={GRID} vertical={false} />
             <XAxis
               dataKey="week"
@@ -150,10 +152,10 @@ function ChartCard({
               axisLine={{ stroke: HOT_PINK }}
             />
             <YAxis
-              // Keep the axis line at the very edge, with ticks inside the plot.
+              domain={[min, max]}
               mirror
               tickMargin={2}
-              width={36} // small, prevents extra padding while keeping labels readable
+              width={36}
               stroke={HOT_PINK}
               tick={{ fill: HOT_PINK, fontSize: 11 }}
               tickLine={{ stroke: HOT_PINK }}
@@ -184,7 +186,135 @@ function ChartCard({
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+
+        {/* Draggable line overlay (drag anywhere ON the line or the handle) */}
+        <DraggableLine
+          value={line}
+          onChange={setLine}
+          domain={{ min, max }}
+          margins={MARGINS}
+        />
       </div>
+    </div>
+  );
+}
+
+/* --------------- Draggable overlay --------------- */
+function DraggableLine({
+  value,
+  onChange,
+  domain,
+  margins,
+}: {
+  value: number | null;
+  onChange: (v: number | null) => void;
+  domain: { min: number; max: number };
+  margins: { top: number; right: number; bottom: number; left: number };
+}) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const draggingRef = useRef<boolean>(false);
+
+  // Convert between pixel Y (within the overlay) and chart value
+  const yToValue = (y: number, h: number) => {
+    const plotH = Math.max(1, h - margins.top - margins.bottom);
+    const yClamped = Math.min(h - margins.bottom, Math.max(margins.top, y));
+    const t = (yClamped - margins.top) / plotH; // 0 at top, 1 at bottom
+    const v = domain.max - t * (domain.max - domain.min);
+    return Math.max(domain.min, Math.min(domain.max, v));
+  };
+
+  const valueToY = (v: number, h: number) => {
+    const plotH = Math.max(1, h - margins.top - margins.bottom);
+    const t = (domain.max - v) / (domain.max - domain.min || 1);
+    return margins.top + t * plotH;
+  };
+
+  const startDrag = (clientY: number) => {
+    const el = ref.current;
+    if (!el) return;
+    draggingRef.current = true;
+    const rect = el.getBoundingClientRect();
+    const y = clientY - rect.top;
+    onChange(yToValue(y, rect.height));
+  };
+
+  const moveDrag = (clientY: number) => {
+    if (!draggingRef.current) return;
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const y = clientY - rect.top;
+    onChange(yToValue(y, rect.height));
+  };
+
+  const stopDrag = () => {
+    draggingRef.current = false;
+  };
+
+  // Compute current Y for positioning (when ref is available)
+  let lineTop = 0;
+  if (value !== null && ref.current) {
+    const h = ref.current.getBoundingClientRect().height;
+    lineTop = valueToY(value, h);
+  }
+
+  return (
+    <div
+      ref={ref}
+      className="pointer-events-none absolute inset-0"
+      // Mouse
+      onMouseMove={(e) => moveDrag(e.clientY)}
+      onMouseUp={stopDrag}
+      onMouseLeave={stopDrag}
+      // Touch
+      onTouchMove={(e) => moveDrag(e.touches[0]?.clientY ?? 0)}
+      onTouchEnd={stopDrag}
+      onTouchCancel={stopDrag}
+    >
+      {value !== null && (
+        <div
+          className="absolute left-0 right-0"
+          style={{ top: `${lineTop}px` }}
+        >
+          {/* Interactive strip around the line (tall for easy grabbing) */}
+          <div className="relative pointer-events-auto -translate-y-1/2 h-6">
+            {/* Transparent hit area over the whole line to start drag anywhere */}
+            <div
+              className="absolute left-0 right-8 top-0 bottom-0 cursor-grab"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                startDrag(e.clientY);
+              }}
+              onTouchStart={(e) => {
+                startDrag(e.touches[0]?.clientY ?? 0);
+              }}
+              aria-hidden
+            />
+            {/* Visible line */}
+            <div
+              className="absolute left-0 right-8 top-1/2 h-0.5"
+              style={{ background: LIME, opacity: 0.9 }}
+            />
+            {/* Handle on the right */}
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 touch-none select-none">
+              <button
+                type="button"
+                aria-label="Drag prop line"
+                className="h-6 w-6 cursor-grab rounded-full border border-lime-400 bg-black text-[10px] font-semibold text-lime-300 active:cursor-grabbing"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  startDrag(e.clientY);
+                }}
+                onTouchStart={(e) => {
+                  startDrag(e.touches[0]?.clientY ?? 0);
+                }}
+              >
+                ≡
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

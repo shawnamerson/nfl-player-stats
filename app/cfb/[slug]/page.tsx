@@ -1,14 +1,17 @@
 // app/cfb/[slug]/page.tsx
-import { sql } from "@vercel/postgres";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+import { sql } from "@/lib/db";
 import Link from "next/link";
+
 import QBCharts, { QBRow } from "@/components/QBCharts";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ season?: string }>;
 };
-
-export const dynamic = "force-dynamic";
 
 export default async function PlayerDetailCFB({
   params,

@@ -1,5 +1,5 @@
 // app/players/page.tsx
-import { sql } from "@vercel/postgres";
+import { sql } from "@/lib/db";
 import Link from "next/link";
 
 type PageProps = {

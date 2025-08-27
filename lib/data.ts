@@ -1,4 +1,5 @@
-import { sql } from "@vercel/postgres";
+// lib/data.ts
+import { sql } from "@/lib/db"; // ⬅️ use our wrapper
 import type { Player, GameStat } from "./definitions";
 
 export async function getPlayers(): Promise<Player[]> {

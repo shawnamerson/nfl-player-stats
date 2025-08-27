@@ -1,5 +1,5 @@
 // app/nfl/[slug]/page.tsx
-import { sql } from "@vercel/postgres";
+import { sql } from "@/lib/db";
 import Link from "next/link";
 import QBCharts, { QBRow } from "@/components/QBCharts";
 

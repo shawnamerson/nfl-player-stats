@@ -1,5 +1,8 @@
 // app/cfb/players/page.tsx
-import { sql } from "@vercel/postgres";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+import { sql } from "@/lib/db";
 import Link from "next/link";
 
 type PageProps = {
@@ -11,8 +14,6 @@ type PlayerRow = {
   position: string | null;
   slug: string;
 };
-
-export const dynamic = "force-dynamic";
 
 export default async function PlayersCFB({ searchParams }: PageProps) {
   const sp = await searchParams;

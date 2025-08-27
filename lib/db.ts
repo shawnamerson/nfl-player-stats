@@ -1,34 +1,40 @@
 // lib/db.ts
-import { createClient } from "@vercel/postgres";
+import { createClient, createPool, sql as _sql } from "@vercel/postgres";
 
-// Prefer the pooled Neon URL. Fall back to DATABASE_URL / NON_POOLING if needed.
-const connectionString =
+// Prefer pooled for runtime pages (POSTGRES_URL should be the -pooler URL)
+const POOLED_URL =
   process.env.POSTGRES_URL ||
-  process.env.DATABASE_URL ||
-  process.env.POSTGRES_URL_NON_POOLING ||
+  process.env.POSTGRES_PRISMA_URL || // if you mapped it here
   "";
 
-// Keep the exact type of the sql tag so generics still work: sql<T>`...`
-type SqlTag = ReturnType<typeof createClient>["sql"];
+const UNPOOLED_URL =
+  process.env.POSTGRES_URL_NON_POOLING ||
+  process.env.DATABASE_URL || // if you only set DATABASE_URL
+  process.env.DATABASE_URL_UNPOOLED ||
+  "";
 
-function makeThrowingSql(): SqlTag {
-  // A template tag that throws a clear error if called w/o a connection string
+// Use the same type as the official tag so generics keep working: sql<MyRow>`...`
+type SQLTag = typeof _sql;
+
+function throwingSql(): SQLTag {
   const fn: any = () => {
     throw Object.assign(
       new Error(
-        "DB connection string missing. Set POSTGRES_URL (pooled Neon URL) or DATABASE_URL in your Vercel Environment Variables."
+        "DB connection string missing. Set POSTGRES_URL (pooled Neon URL ending with -pooler & sslmode=require) " +
+          "or POSTGRES_URL_NON_POOLING / DATABASE_URL (unpooled) in Vercel."
       ),
       { code: "missing_connection_string" }
     );
   };
-  // Mirror common helpers so accidental calls also throw nicely
   fn.array = fn;
   fn.unsafe = fn;
   fn.file = fn;
-  return fn as SqlTag;
+  return fn as SQLTag;
 }
 
-const client = connectionString ? createClient({ connectionString }) : null;
-
-// Export a typed sql tag that your code can use with generics like sql<MyRow>
-export const sql: SqlTag = client ? client.sql : makeThrowingSql();
+// If you gave us a pooled URL, use createPool(); otherwise if you gave an unpooled URL, use createClient().
+export const sql = POOLED_URL
+  ? createPool({ connectionString: POOLED_URL }).sql
+  : UNPOOLED_URL
+  ? createClient({ connectionString: UNPOOLED_URL }).sql
+  : throwingSql();

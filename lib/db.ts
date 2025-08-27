@@ -1,39 +1,47 @@
 // lib/db.ts
-import { createClient, createPool, sql as _sql } from "@vercel/postgres";
+import { createClient, createPool } from "@vercel/postgres";
 
-// Prefer pooled for runtime pages (POSTGRES_URL should be the -pooler URL)
+// Trim helper
+const t = (s?: string) => (typeof s === "string" ? s.trim() : "");
+
+// Prefer pooled (-pooler) for production pages
 const POOLED_URL =
-  process.env.POSTGRES_URL ||
-  process.env.POSTGRES_PRISMA_URL || // if you mapped it here
+  t(process.env.POSTGRES_URL) ||               // pooled (recommended)
+  t(process.env.POSTGRES_PRISMA_URL) ||        // sometimes used
   "";
 
 const UNPOOLED_URL =
-  process.env.POSTGRES_URL_NON_POOLING ||
-  process.env.DATABASE_URL || // if you only set DATABASE_URL
-  process.env.DATABASE_URL_UNPOOLED ||
+  t(process.env.POSTGRES_URL_NON_POOLING) ||   // unpooled
+  t(process.env.DATABASE_URL) ||               // common fallback
+  t(process.env.DATABASE_URL_UNPOOLED) ||      // just in case
   "";
 
-// Use the same type as the official tag so generics keep working: sql<MyRow>`...`
-type SQLTag = typeof _sql;
+// The function type of .sql
+type SqlTag = ReturnType<typeof createPool>["sql"];
 
-function throwingSql(): SQLTag {
+// Throwing stub that preserves the same surface for typing
+function throwingSql(): SqlTag {
   const fn: any = () => {
+    const flags = {
+      POSTGRES_URL: !!process.env.POSTGRES_URL,
+      POSTGRES_URL_NON_POOLING: !!process.env.POSTGRES_URL_NON_POOLING,
+      DATABASE_URL: !!process.env.DATABASE_URL,
+      NEXT_RUNTIME: (process as any)?.env?.NEXT_RUNTIME || "unknown",
+    };
     throw Object.assign(
       new Error(
-        "DB connection string missing. Set POSTGRES_URL (pooled Neon URL ending with -pooler & sslmode=require) " +
-          "or POSTGRES_URL_NON_POOLING / DATABASE_URL (unpooled) in Vercel."
+        "No database connection string found. Set POSTGRES_URL (pooled -pooler URL with sslmode=require) " +
+          "or POSTGRES_URL_NON_POOLING / DATABASE_URL."
       ),
-      { code: "missing_connection_string" }
+      { code: "missing_connection_string", flags }
     );
   };
-  fn.array = fn;
-  fn.unsafe = fn;
-  fn.file = fn;
-  return fn as SQLTag;
+  fn.array = fn; fn.file = fn; fn.unsafe = fn; fn.bind = () => fn;
+  return fn as SqlTag;
 }
 
-// If you gave us a pooled URL, use createPool(); otherwise if you gave an unpooled URL, use createClient().
-export const sql = POOLED_URL
+// Export the correctly typed tag
+export const sql: SqlTag = POOLED_URL
   ? createPool({ connectionString: POOLED_URL }).sql
   : UNPOOLED_URL
   ? createClient({ connectionString: UNPOOLED_URL }).sql

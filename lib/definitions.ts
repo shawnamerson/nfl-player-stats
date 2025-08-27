@@ -1,32 +1,43 @@
+// lib/definitions.ts
+export type League = "nfl" | "cfb";
+
 export type Player = {
   player_id: string;
   player_name: string;
   image_url: string | null;
   position: string | null;
-  league: "nfl" | "cfb";
+  league: League;
   slug: string;
 };
 
 export type GameStat = {
-  id: number;
+  id: string;
   player_id: string;
-  week: number;
   season: number;
+  week: number;
+  game_date: string | null;
+
   opponent: string | null;
   opp_abbr: string | null;
-  pass_yds: number;
-  rush_yds: number;
-  rec_yds: number;
-  pass_td: number;
-  interceptions: number;
-};
 
-export type DefenseStat = {
-  id: number;
-  team_abbr: string;
-  season: number;
-  week: number;
-  pass_yds_allowed: number;
-  rush_yds_allowed: number;
-  rec_yds_allowed: number;
+  // Passing
+  pass_att: number | null;
+  pass_cmp: number | null;
+  pass_cmp_pct: number | null;
+  pass_ypa: number | null;
+  pass_long: number | null;
+  pass_yds: number | null;
+  pass_td: number | null;
+  interceptions: number | null;
+  sacks: number | null;
+  passer_rating: number | null;
+  qbr: number | null;
+
+  // Rushing / Receiving (for completeness)
+  rush_att: number | null;
+  rush_yds: number | null;
+  rush_td: number | null;
+  rush_long: number | null;
+
+  rec_yds: number | null;
 };

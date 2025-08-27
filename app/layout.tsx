@@ -1,4 +1,7 @@
 // app/layout.tsx
+// app/layout.tsx
+export const runtime = "nodejs"; // <-- add this line
+
 import "./globals.css";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";

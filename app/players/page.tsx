@@ -1,4 +1,7 @@
 // app/players/page.tsx
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 import { sql } from "@/lib/db";
 import Link from "next/link";
 
@@ -6,11 +9,7 @@ type PageProps = {
   searchParams: Promise<{ q?: string; pos?: string; page?: string }>;
 };
 
-type PlayerRow = {
-  player_name: string;
-  position: string | null;
-  slug: string;
-};
+type PlayerRow = { player_name: string; position: string | null; slug: string };
 
 export default async function PlayersPage({ searchParams }: PageProps) {
   const sp = await searchParams;
@@ -21,7 +20,7 @@ export default async function PlayersPage({ searchParams }: PageProps) {
   const limit = 30;
   const offset = (page - 1) * limit;
 
-  const playersRes = await sql/* sql */ `
+  const playersRes = await sql<PlayerRow>/* sql */ `
     SELECT player_name, position, slug
     FROM players
     WHERE league = 'nfl'
@@ -30,7 +29,7 @@ export default async function PlayersPage({ searchParams }: PageProps) {
     ORDER BY player_name ASC
     LIMIT ${limit + 1} OFFSET ${offset};
   `;
-  const rows = playersRes.rows as PlayerRow[];
+  const rows = playersRes.rows;
   const hasMore = rows.length > limit;
   const players = hasMore ? rows.slice(0, limit) : rows;
 
@@ -48,7 +47,7 @@ export default async function PlayersPage({ searchParams }: PageProps) {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Players</h1>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-slate-400">
             Search and browse NFL players
           </p>
         </div>
@@ -61,12 +60,12 @@ export default async function PlayersPage({ searchParams }: PageProps) {
             name="q"
             defaultValue={q}
             placeholder="Search by name"
-            className="w-48 rounded-lg border px-3 py-1.5 text-sm"
+            className="w-48 rounded-lg border border-zinc-700 bg-black px-3 py-1.5 text-sm text-white"
           />
           <select
             name="pos"
             defaultValue={pos}
-            className="rounded-lg border px-2 py-1.5 text-sm"
+            className="rounded-lg border border-zinc-700 bg-black px-2 py-1.5 text-sm text-white"
           >
             <option value="">All</option>
             <option value="QB">QB</option>
@@ -74,13 +73,12 @@ export default async function PlayersPage({ searchParams }: PageProps) {
             <option value="WR">WR</option>
             <option value="TE">TE</option>
           </select>
-          <button className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm text-white">
+          <button className="rounded-lg bg-fuchsia-600 px-3 py-1.5 text-sm text-white">
             Filter
           </button>
         </form>
       </header>
 
-      {/* Grid of fully-clickable cards */}
       <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
         {players.map((p) => (
           <li key={p.slug} className="h-full">
@@ -104,7 +102,6 @@ export default async function PlayersPage({ searchParams }: PageProps) {
         ))}
       </ul>
 
-      {/* Pager */}
       <nav className="flex items-center justify-between">
         <Link
           href={hrefFor(page - 1)}
@@ -115,7 +112,7 @@ export default async function PlayersPage({ searchParams }: PageProps) {
         >
           ← Prev
         </Link>
-        <div className="text-sm text-slate-600">Page {page}</div>
+        <div className="text-sm text-slate-400">Page {page}</div>
         <Link
           href={hrefFor(page + 1)}
           aria-disabled={!hasMore}

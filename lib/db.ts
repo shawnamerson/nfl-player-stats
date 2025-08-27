@@ -4,22 +4,27 @@ import { createClient, createPool } from "@vercel/postgres";
 // Trim helper
 const t = (s?: string) => (typeof s === "string" ? s.trim() : "");
 
-// Prefer pooled (-pooler) for production pages
+// Prefer pooled (-pooler) in production
 const POOLED_URL =
-  t(process.env.POSTGRES_URL) ||               // pooled (recommended)
-  t(process.env.POSTGRES_PRISMA_URL) ||        // sometimes used
+  t(process.env.POSTGRES_URL) ||
+  t(process.env.POSTGRES_PRISMA_URL) ||
   "";
 
 const UNPOOLED_URL =
-  t(process.env.POSTGRES_URL_NON_POOLING) ||   // unpooled
-  t(process.env.DATABASE_URL) ||               // common fallback
-  t(process.env.DATABASE_URL_UNPOOLED) ||      // just in case
+  t(process.env.POSTGRES_URL_NON_POOLING) ||
+  t(process.env.DATABASE_URL) ||
+  t(process.env.DATABASE_URL_UNPOOLED) ||
   "";
 
-// The function type of .sql
+// Type of the *function* returned by .sql
 type SqlTag = ReturnType<typeof createPool>["sql"];
 
-// Throwing stub that preserves the same surface for typing
+// Bind helper so `this` is the pool/client instance
+function bindSql<T extends { sql: (...args: any[]) => any }>(obj: T): SqlTag {
+  return obj.sql.bind(obj) as SqlTag;
+}
+
+// Throwing stub that matches the SqlTag surface
 function throwingSql(): SqlTag {
   const fn: any = () => {
     const flags = {
@@ -40,9 +45,14 @@ function throwingSql(): SqlTag {
   return fn as SqlTag;
 }
 
-// Export the correctly typed tag
-export const sql: SqlTag = POOLED_URL
-  ? createPool({ connectionString: POOLED_URL }).sql
-  : UNPOOLED_URL
-  ? createClient({ connectionString: UNPOOLED_URL }).sql
-  : throwingSql();
+// Export a mode hint for diagnostics
+export const DB_MODE: "pooled" | "unpooled" | "none" =
+  POOLED_URL ? "pooled" : UNPOOLED_URL ? "unpooled" : "none";
+
+// Create the correct client and **bind** its sql
+export const sql: SqlTag =
+  DB_MODE === "pooled"
+    ? bindSql(createPool({ connectionString: POOLED_URL }))
+    : DB_MODE === "unpooled"
+    ? bindSql(createClient({ connectionString: UNPOOLED_URL }))
+    : throwingSql();

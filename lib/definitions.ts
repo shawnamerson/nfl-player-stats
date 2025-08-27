@@ -3,7 +3,7 @@ export type Player = {
   player_name: string;
   image_url: string | null;
   position: string | null;
-  league: "nfl";
+  league: "nfl" | "cfb";
   slug: string;
 };
 

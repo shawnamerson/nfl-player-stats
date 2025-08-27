@@ -5,7 +5,7 @@ export async function getPlayers(): Promise<Player[]> {
   const { rows } = await sql<Player>`
     SELECT player_id, player_name, image_url, position, league, slug
     FROM players
-    WHERE league = 'nfl'
+    WHERE league IN ('nfl', 'cfb')
     ORDER BY player_name ASC
   `;
   return rows;

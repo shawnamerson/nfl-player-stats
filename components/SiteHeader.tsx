@@ -6,7 +6,8 @@ import { usePathname } from "next/navigation";
 
 const links = [
   { href: "/", label: "Home" },
-  { href: "/players", label: "Players" },
+  { href: "/players", label: "NFL" },
+  { href: "/cfb/players", label: "NCAAF" },
 ];
 
 export default function SiteHeader() {
@@ -22,7 +23,8 @@ export default function SiteHeader() {
         <nav className="flex items-center gap-1">
           {links.map((l) => {
             const active =
-              pathname === l.href || (l.href !== "/" && pathname.startsWith(l.href));
+              pathname === l.href ||
+              (l.href !== "/" && pathname.startsWith(l.href));
             return (
               <Link
                 key={l.href}

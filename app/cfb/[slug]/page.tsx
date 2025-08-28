@@ -21,13 +21,18 @@ export default async function PlayerDetailCFB({
   const sp = await searchParams;
   const seasonParam = Number(sp.season);
 
-  const playerRes = await sql/* sql */ `
+  type PlayerRow = {
+    player_id: string;
+    player_name: string;
+    position: string | null;
+  };
+  const playerRes = await sql<PlayerRow>/* sql */ `
     SELECT player_id, player_name, position
     FROM players
     WHERE slug = ${slug} AND league = 'cfb'
     LIMIT 1;
   `;
-  const player = playerRes.rows[0];
+  const player: PlayerRow | undefined = playerRes.rows[0];
 
   if (!player) {
     return (

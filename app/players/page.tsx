@@ -9,7 +9,11 @@ type PageProps = {
   searchParams: Promise<{ q?: string; pos?: string; page?: string }>;
 };
 
-type PlayerRow = { player_name: string; position: string | null; slug: string };
+type PlayerRow = {
+  player_name: string;
+  position: string | null;
+  slug: string;
+};
 
 export default async function PlayersPage({ searchParams }: PageProps) {
   const sp = await searchParams;
@@ -20,16 +24,17 @@ export default async function PlayersPage({ searchParams }: PageProps) {
   const limit = 30;
   const offset = (page - 1) * limit;
 
+  // ✅ Type the query so rows aren't `unknown`
   const playersRes = await sql<PlayerRow>/* sql */ `
     SELECT player_name, position, slug
-    FROM players
+    FROM public.players
     WHERE league = 'nfl'
       AND (${q === ""} OR player_name ILIKE ${"%" + q + "%"})
       AND (${pos === ""} OR position = ${pos})
     ORDER BY player_name ASC
     LIMIT ${limit + 1} OFFSET ${offset};
   `;
-  const rows = playersRes.rows;
+  const rows: PlayerRow[] = playersRes.rows;
   const hasMore = rows.length > limit;
   const players = hasMore ? rows.slice(0, limit) : rows;
 
@@ -46,10 +51,8 @@ export default async function PlayersPage({ searchParams }: PageProps) {
     <main className="mx-auto max-w-6xl p-6 space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Players</h1>
-          <p className="text-sm text-slate-400">
-            Search and browse NFL players
-          </p>
+          <h1 className="text-2xl font-semibold text-white">Players</h1>
+          <p className="text-sm text-zinc-400">Search and browse NFL players</p>
         </div>
         <form
           className="flex flex-wrap items-center gap-2"
@@ -112,7 +115,7 @@ export default async function PlayersPage({ searchParams }: PageProps) {
         >
           ← Prev
         </Link>
-        <div className="text-sm text-slate-400">Page {page}</div>
+        <div className="text-sm text-zinc-400">Page {page}</div>
         <Link
           href={hrefFor(page + 1)}
           aria-disabled={!hasMore}

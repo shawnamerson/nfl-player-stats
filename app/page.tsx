@@ -26,7 +26,7 @@ export default function HomePage() {
               <span className="bg-gradient-to-r from-emerald-400 via-indigo-400 to-fuchsia-400 bg-clip-text text-transparent">
                 made obvious
               </span>
-              .
+              !
             </h1>
             <p className="mt-3 max-w-xl text-sm text-zinc-300">
               Visualize weekly performance, set prop lines, highlight hit weeks,

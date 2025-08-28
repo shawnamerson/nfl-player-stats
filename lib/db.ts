@@ -1,58 +1,70 @@
 // lib/db.ts
-import { createClient, createPool } from "@vercel/postgres";
+import { Pool, type QueryResult } from "pg";
 
-// Trim helper
-const t = (s?: string) => (typeof s === "string" ? s.trim() : "");
-
-// Prefer pooled (-pooler) in production
-const POOLED_URL =
-  t(process.env.POSTGRES_URL) ||
-  t(process.env.POSTGRES_PRISMA_URL) ||
-  "";
-
-const UNPOOLED_URL =
-  t(process.env.POSTGRES_URL_NON_POOLING) ||
-  t(process.env.DATABASE_URL) ||
-  t(process.env.DATABASE_URL_UNPOOLED) ||
-  "";
-
-// Type of the *function* returned by .sql
-type SqlTag = ReturnType<typeof createPool>["sql"];
-
-// Bind helper so `this` is the pool/client instance
-function bindSql<T extends { sql: (...args: any[]) => any }>(obj: T): SqlTag {
-  return obj.sql.bind(obj) as SqlTag;
+// Re-use a single pool in dev/hot-reload
+declare global {
+  // eslint-disable-next-line no-var
+  var __pgPool: Pool | undefined;
 }
 
-// Throwing stub that matches the SqlTag surface
-function throwingSql(): SqlTag {
-  const fn: any = () => {
+// Prefer Supabase pooled connection (port 6543)
+const connectionString =
+  (process.env.DATABASE_URL || process.env.SUPABASE_DB_URL || "").trim();
+
+if (!global.__pgPool && connectionString) {
+  global.__pgPool = new Pool({
+    connectionString,
+    // Supabase requires SSL in hosted environments; the flag below works for Supabase-managed certs
+    ssl: { rejectUnauthorized: false },
+    // Optional: tweak if you like
+    // max: 10,
+    // idleTimeoutMillis: 30_000,
+  });
+}
+
+const pool = global.__pgPool;
+
+type Row = Record<string, unknown>;
+
+// Build a parameterized query out of a template tag
+function buildQuery(strings: TemplateStringsArray, values: unknown[]) {
+  let text = "";
+  const params: unknown[] = [];
+  strings.forEach((s, i) => {
+    text += s;
+    if (i < values.length) {
+      params.push(values[i]);
+      text += `$${params.length}`;
+    }
+  });
+  return { text, values: params };
+}
+
+// The sql tag you can keep using: sql<MyRow>`SELECT ... WHERE x=${y}`
+export async function sql<O extends Row = Row>(
+  strings: TemplateStringsArray,
+  ...values: unknown[]
+): Promise<QueryResult<O>> {
+  if (!pool) {
     const flags = {
-      POSTGRES_URL: !!process.env.POSTGRES_URL,
-      POSTGRES_URL_NON_POOLING: !!process.env.POSTGRES_URL_NON_POOLING,
-      DATABASE_URL: !!process.env.DATABASE_URL,
-      NEXT_RUNTIME: (process as any)?.env?.NEXT_RUNTIME || "unknown",
+      hasDATABASE_URL: !!process.env.DATABASE_URL,
+      hasSUPABASE_DB_URL: !!process.env.SUPABASE_DB_URL,
     };
     throw Object.assign(
       new Error(
-        "No database connection string found. Set POSTGRES_URL (pooled -pooler URL with sslmode=require) " +
-          "or POSTGRES_URL_NON_POOLING / DATABASE_URL."
+        "No DB connection string. Set DATABASE_URL (recommended) or SUPABASE_DB_URL to your Supabase pooled URL (port 6543, sslmode=require)."
       ),
       { code: "missing_connection_string", flags }
     );
-  };
-  fn.array = fn; fn.file = fn; fn.unsafe = fn; fn.bind = () => fn;
-  return fn as SqlTag;
+  }
+  const { text, values: params } = buildQuery(strings, values);
+  return pool.query<O>({ text, values: params });
 }
 
-// Export a mode hint for diagnostics
-export const DB_MODE: "pooled" | "unpooled" | "none" =
-  POOLED_URL ? "pooled" : UNPOOLED_URL ? "unpooled" : "none";
+// Optional helpers mirroring common patterns
+(sql as any).unsafe = async <O extends Row = Row>(text: string, params: unknown[] = []) => {
+  if (!pool) throw new Error("DB not initialized");
+  return pool.query<O>({ text, values: params });
+};
 
-// Create the correct client and **bind** its sql
-export const sql: SqlTag =
-  DB_MODE === "pooled"
-    ? bindSql(createPool({ connectionString: POOLED_URL }))
-    : DB_MODE === "unpooled"
-    ? bindSql(createClient({ connectionString: UNPOOLED_URL }))
-    : throwingSql();
+export type { QueryResult };
